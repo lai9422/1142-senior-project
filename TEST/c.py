@@ -3,7 +3,7 @@ import requests
 # ==========================================
 # 把你那串 s1jqKWheyc... 開頭的 Token 貼在這裡
 # ==========================================
-token = 'EGLy/YJSQQuARXbOhzTCtC0m2tmykFefsdCVAuELB5aEgyhMxZSSkFnpL/gh7OG2/KAtaAgGZqpuR3gMQfNakO VyoaXELWHRz26EtlvmwPWCpjCRmDNbvTYdVydlevvD95k6QKXIqcwsNXN3SfL62AdB04t89/1O/w1cDnyilFU='
+token = ''
 # 1. 自動去除前後空白 (這一步常常能解決問題！)
 token = token.strip() 
 

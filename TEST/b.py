@@ -8,9 +8,9 @@ app = Flask(__name__)
 # ==========================================
 # 請填入你的 Key (確保沒有多餘空白)
 # ==========================================
-access_token = 'EGLy/YJSQQuARXbOhzTCtC0m2tmykFefsdCVAuELB5aEgyhMxZSSkFnpL/gh7OG2/KAtaAgGZqpuR3gMQfNakO VyoaXELWHRz26EtlvmwPWCpjCRmDNbvTYdVydlevvD95k6QKXIqcwsNXN3SfL62AdB04t89/1O/w1cDnyilFU='
+access_token = ''
 access_token = access_token.strip()
-secret = '7213c2b7e307e0174d67fd8bb425334d'
+secret = ''
 
 
 # 【新增這行】印出來檢查長度！
