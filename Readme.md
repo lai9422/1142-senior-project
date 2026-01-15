@@ -11,6 +11,9 @@
 ```
 
 # 函式安裝
+Anaconda Navigator
+https://drive.google.com/file/d/1Wi1gUjaOv2A06M0gK8xqLiAIjOv1lbpD/view?usp=sharing
+
 `pip install line-bot-sdk`
 
 `pip install flask line-bot-sdk python-dotenv`
