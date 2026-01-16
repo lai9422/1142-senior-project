@@ -1,65 +1,148 @@
-import jieba
+# ==========================================
+# 匯入必要的模組
+# ==========================================
+import os
+import json
+import jieba           # 中文斷詞
+import mysql.connector # MySQL 資料庫
+from google import genai     # Google GenAI 新版 SDK
+from dotenv import load_dotenv # 讀取 .env 環境變數
+
+# Line Bot SDK 相關
 from linebot.models import (
     MessageEvent, TextMessage, TextSendMessage, 
     QuickReply, QuickReplyButton, MessageAction
 )
 from linebot.exceptions import LineBotApiError
+
+# 專案內部匯入
 from src.line_bot_api import line_bot_api, handler
+from config import Config
+
+# 確保環境變數被載入
+load_dotenv()
 
 # ==========================================
-# 1. 模擬資料庫 (Intents Data)
+# 1. 初始化 AI Client (修正為新版寫法)
 # ==========================================
-# 這裡將你提供的表格轉換為 Python 資料結構
-# danger: 5(最高危), 0(一般)
-INTENTS = [
-    {
-        "category": "緊急求助",
-        "keywords": ["死", "自殺", "割腕", "藥", "消失", "頂樓"],
-        "danger": 5,
-        "response": "同學，我感覺到你現在非常痛苦，謝謝你告訴我。這一刻請先停下來，我們很重視你的安全。👇 請點擊下方按鈕，有人會馬上聽你說。",
-        "action": "SHOW_CRISIS_MENU"
-    },
-    {
-        "category": "身體界線",
-        "keywords": ["摸", "不舒服", "奇怪", "碰", "強迫", "性騷擾"],
-        "danger": 3,
-        "response": "遇到這樣的情況確實會讓人感到困惑和不舒服。你的感覺很重要。如果是對方未經同意的碰觸，這可能涉及到性騷擾。你想多了解如何保護自己嗎？",
-        "action": "LINK_LEGAL_INFO"
-    },
-    {
-        "category": "情緒宣洩",
-        "keywords": ["髒", "噁心", "爛", "洗澡", "洗不乾淨"],
-        "danger": 2,
-        "response": "親愛的，那不是你的錯，也不是你髒。這種「洗不乾淨」的感覺是創傷後常見的生理反應，是身體想保護你的機制...",
-        "action": "NONE"
-    },
-    {
-        "category": "測試/打招呼",
-        "keywords": ["在嗎", "哈囉", "嗨", "誰", "聊聊", "你好"],
-        "danger": 0,
-        "response": "嗨！我在這裡。我是專門陪你的小幫手。這裡很安全，你可以說說任何你想說的事，或是點選單看看我能幫什麼忙。",
-        "action": "SHOW_MAIN_MENU"
-    }
-]
+client = None # 全域變數
+
+try:
+    api_key = os.getenv("GEMINI_API_KEY")
+    if api_key:
+        # 新版 SDK 初始化：建立 Client 物件
+        client = genai.Client(api_key=api_key)
+        print("✅ AI Client 初始化成功")
+    else:
+        print("⚠️ 警告: 未設定 GEMINI_API_KEY，將無法使用 AI 潤飾功能")
+except Exception as e:
+    print(f"❌ AI 初始化失敗: {e}")
 
 # ==========================================
-# 2. 輔助函式：處理特殊動作 (Action)
+# 2. 資料庫讀取函式 (含失敗備案)
+# ==========================================
+def get_intents():
+    """
+    從 MySQL 讀取意圖。若失敗則回傳備用資料。
+    """
+    try:
+        conn = mysql.connector.connect(
+            host=Config.DB_HOST,
+            user=Config.DB_USER,
+            password=Config.DB_PASSWORD,
+            database=Config.DB_NAME,
+            connect_timeout=3
+        )
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM bot_intents")
+        rows = cursor.fetchall()
+
+        intents = []
+        for row in rows:
+            # 解析 keywords JSON 字串
+            if isinstance(row['keywords'], str):
+                try:
+                    row['keywords'] = json.loads(row['keywords'])
+                except:
+                    row['keywords'] = []
+            intents.append(row)
+
+        cursor.close()
+        conn.close()
+
+        if not intents:
+            raise Exception("Database Empty")
+        
+        return intents
+
+    except Exception as e:
+        print(f"⚠️ 資料庫讀取失敗 ({e})，切換至備用資料")
+        # 備用資料
+        return [
+            {
+                "category": "緊急求助 (備用)",
+                "keywords": ["死", "自殺", "頂樓"],
+                "danger": 5,
+                "response": "系統連線中，請先冷靜。我們很關心你，請撥打 113。",
+                "action": "SHOW_CRISIS_MENU"
+            },
+            {
+                "category": "打招呼 (備用)",
+                "keywords": ["嗨", "你好"],
+                "danger": 0,
+                "response": "嗨！系統維護中，但我還是在這裡。",
+                "action": "SHOW_MAIN_MENU"
+            }
+        ]
+
+# ==========================================
+# 3. AI 潤飾函式 (使用新版 SDK)
+# ==========================================
+def ai_polish_response(user_text, base_response, category):
+    """
+    呼叫 Gemini 潤飾回應
+    """
+    # 如果 Client 沒初始化成功，直接回傳原句
+    if not client:
+        return base_response
+
+    try:
+        # 提示詞 (Prompt)
+        prompt = f"""
+        你是一位溫暖的心理諮詢師助手。
+        【情境】使用者說：「{user_text}」，分類為：「{category}」
+        【任務】請將標準回覆：「{base_response}」改寫得更溫柔、有同理心。
+        【規定】1.保留具體建議與按鈕指示。 2.字數100字內。
+        """
+
+        # 【修正重點】使用 client.models.generate_content
+        response = client.models.generate_content(
+            model="gemini-1.5-flash",
+            contents=prompt
+        )
+
+        if response.text:
+            return response.text.strip()
+        else:
+            return base_response
+
+    except Exception as e:
+        print(f"❌ AI 生成出錯: {e}")
+        return base_response
+
+# ==========================================
+# 4. 輔助函式：產生回覆物件
 # ==========================================
 def get_reply_object(reply_text, action):
-    """
-    根據 Action 類型，決定要回傳單純文字，還是帶有按鈕(QuickReply)的訊息
-    """
     if action == "SHOW_CRISIS_MENU":
-        # 範例：加上緊急求助按鈕
         return TextSendMessage(
             text=reply_text,
             quick_reply=QuickReply(items=[
-                QuickReplyButton(action=MessageAction(label="打給 113", text="撥打 113")),
-                QuickReplyButton(action=MessageAction(label="打給 110", text="撥打 110"))
+                QuickReplyButton(action=MessageAction(label="撥打 113", text="撥打 113")),
+                QuickReplyButton(action=MessageAction(label="撥打 110", text="撥打 110"))
             ])
         )
     elif action == "SHOW_MAIN_MENU":
-        # 範例：加上主選單按鈕
         return TextSendMessage(
             text=reply_text,
             quick_reply=QuickReply(items=[
@@ -68,55 +151,57 @@ def get_reply_object(reply_text, action):
             ])
         )
     else:
-        # 預設只回傳文字
         return TextSendMessage(text=reply_text)
 
 # ==========================================
-# 3. 主要訊息處理邏輯
+# 5. Line Bot Handler
 # ==========================================
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_msg = event.message.text.strip()
-    print(f"收到訊息: {user_msg}")
+    print(f"📩 收到訊息: {user_msg}")
 
-    # --- 步驟 A: Jieba 斷詞 ---
-    # cut_all=False 精確模式 (適合文本分析)
+    # 1. 取得意圖庫
+    intents = get_intents()
+
+    # 2. 斷詞
     seg_list = list(jieba.cut(user_msg, cut_all=False))
-    print(f"斷詞結果: {seg_list}")
+    print(f"✂️ 斷詞: {seg_list}")
 
-    # --- 步驟 B: 關鍵字比對 ---
-    matched_intent = None
-    
-    # 遍歷所有意圖，尋找是否有關鍵字出現在斷詞結果中
+    # 3. 比對關鍵字
     found_intents = []
-    for intent in INTENTS:
-        # 檢查該意圖的所有關鍵字，是否有任何一個出現在使用者的斷詞清單中
-        # 使用 set intersection (交集) 來快速比對
+    for intent in intents:
+        # 轉成 set 取交集
         if set(intent["keywords"]) & set(seg_list):
             found_intents.append(intent)
-    
-    # --- 步驟 C: 決定最佳回應 (邏輯：取危險指數最高的) ---
-    if found_intents:
-        # 根據 danger 欄位由大到小排序，取第一個
-        found_intents.sort(key=lambda x: x["danger"], reverse=True)
-        matched_intent = found_intents[0]
-        print(f">> 命中意圖: {matched_intent['category']} (危險級別: {matched_intent['danger']})")
-    else:
-        # 如果都沒命中，可以設定一個預設回應 (Fallback)
-        print(">> 未命中任何關鍵字，使用預設回應")
-        matched_intent = {
-            "response": "我不太確定你的意思，但我在這裡陪你。你可以多說一點嗎？",
-            "action": "NONE"
-        }
 
-    # --- 步驟 D: 回傳訊息 ---
-    try:
-        reply_message = get_reply_object(matched_intent["response"], matched_intent["action"])
+    # 4. 決策與 AI 潤飾
+    final_response_text = ""
+    action_code = "NONE"
+
+    if found_intents:
+        # 依危險度排序 (高 -> 低)
+        found_intents.sort(key=lambda x: x["danger"], reverse=True)
+        matched = found_intents[0]
         
-        line_bot_api.reply_message(
-            event.reply_token,
-            reply_message
+        print(f"🎯 命中: {matched['category']}")
+        
+        # 呼叫 AI 潤飾
+        final_response_text = ai_polish_response(
+            user_msg, matched['response'], matched['category']
         )
-        print("✅ 回傳成功！")
+        action_code = matched['action']
+    else:
+        # 未命中
+        print("🤷‍♂️ 未命中，使用預設回應")
+        default_text = "我不太確定你的意思，但我在這裡陪你。你可以多說一點嗎？"
+        final_response_text = ai_polish_response(user_msg, default_text, "閒聊")
+        action_code = "SHOW_MAIN_MENU"
+
+    # 5. 回覆
+    try:
+        reply_obj = get_reply_object(final_response_text, action_code)
+        line_bot_api.reply_message(event.reply_token, reply_obj)
+        print("✅ 訊息已發送")
     except LineBotApiError as e:
-        print(f"❌ 回傳失敗: {e.status_code} {e.message}")
+        print(f"❌ Line API 錯誤: {e.status_code} {e.message}")
