@@ -4,17 +4,21 @@ my_line_bot/
 ├── .env                  (維持不變)
 ├── run.py                (維持不變)
 ├── config.py             (維持不變)
-├── mydict.txt            (新增: 自訂字典檔，選用)
-├── delete_words.txt      (新增: 停用詞檔案，選用)
+├── mydict.txt            (維持不變: 自訂字典檔)
+├── delete_words.txt      (維持不變: 停用詞檔案)
+├── files/                (📂新增: 專門放置要給機器人學習的文章 .txt 檔案)
+├── templates/            (📂新增: Flask 網頁模板資料夾)
+│   └── admin.html        (🔥新: 訓練後台的網頁介面 HTML)
 └── src/
-    ├── __init__.py       (維持不變)
+    ├── __init__.py       (🔄修: 新增註冊 admin 藍圖)
     ├── line_bot_api.py   (維持不變)
-    ├── controller.py     (維持不變)
-    ├── database.py       (🔥新: 專門處理資料庫)
-    ├── ai_client.py      (🔥新: 專門處理 AI)
-    ├── text_processor.py (🔥新: 專門處理斷詞與停用詞)
-    ├── intent_matcher.py (🔥新: 專門處理關鍵字比對)
-    └── service.py        (🔄修: 變成「指揮官」，負責調度上述模組)
+    ├── controller.py     (維持不變: 專門處理 Line Webhook 請求)
+    ├── admin.py          (🔥新: 專門處理後台網頁邏輯 /admin)
+    ├── database.py       (🔄修: 新增「寫入/更新」資料庫的函式)
+    ├── ai_client.py      (維持不變: 處理 Gemini AI)
+    ├── text_processor.py (🔄修: 新增「批量讀取 files 資料夾」功能)
+    ├── intent_matcher.py (維持不變: 處理關鍵字比對)
+    └── service.py        (維持不變: 指揮官)
 ```
 
 # 函式安裝  
@@ -86,3 +90,6 @@ INSERT INTO bot_intents (category, keywords, danger, response, action) VALUES
     'SHOW_MAIN_MENU'
 );
 ```
+
+# 資料庫更新
+http://127.0.0.1:5001/admin

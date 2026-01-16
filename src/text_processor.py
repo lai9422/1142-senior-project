@@ -43,3 +43,37 @@ def segment_text(text):
             
     print(f"✂️ 斷詞結果: {filtered_words}")
     return filtered_words
+
+# ==========================================
+# [src/text_processor.py] 的最下方加入
+
+def analyze_folder_words(folder_path='./files', top_n=20):
+    """ 讀取資料夾內所有 txt，回傳高頻詞列表 """
+    if not os.path.exists(folder_path):
+        return []
+
+    all_content = ""
+    # 讀取所有 txt
+    for filename in os.listdir(folder_path):
+        if filename.endswith(".txt"):
+            path = os.path.join(folder_path, filename)
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    all_content += f.read()
+            except:
+                pass
+
+    # 斷詞
+    words = jieba.cut(all_content)
+    
+    # 統計
+    word_count = {}
+    for w in words:
+        w = w.strip()
+        # 過濾邏輯: 長度>1 且 不在停用詞中
+        if len(w) > 1 and w not in del_words_set:
+            word_count[w] = word_count.get(w, 0) + 1
+    
+    # 排序取前 N 名 (回傳格式: [('心情', 50), ('難過', 30)...])
+    sorted_list = sorted(word_count.items(), key=lambda x: x[1], reverse=True)
+    return sorted_list[:top_n]

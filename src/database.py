@@ -54,3 +54,66 @@ def get_intents():
                 "action": "SHOW_MAIN_MENU"
             }
         ]
+# [src/database.py] 的最下方加入
+
+def update_keywords_in_db(category_id, new_keywords):
+    """ 更新現有分類的關鍵字 (讀取舊的 -> 合併 -> 寫回) """
+    try:
+        conn = mysql.connector.connect(
+            host=Config.DB_HOST, user=Config.DB_USER,
+            password=Config.DB_PASSWORD, database=Config.DB_NAME
+        )
+        cursor = conn.cursor(dictionary=True)
+
+        # 1. 查出舊的
+        cursor.execute("SELECT keywords FROM bot_intents WHERE id = %s", (category_id,))
+        row = cursor.fetchone()
+        
+        current_keywords = []
+        if row and row['keywords']:
+            # 判斷是字串還是已經是 list (視 driver 版本而定)
+            if isinstance(row['keywords'], str):
+                current_keywords = json.loads(row['keywords'])
+            else:
+                current_keywords = row['keywords']
+
+        # 2. 合併 (使用 set 去重複)
+        updated_set = set(current_keywords)
+        for w in new_keywords:
+            updated_set.add(w)
+        
+        final_json = json.dumps(list(updated_set), ensure_ascii=False)
+
+        # 3. 更新
+        cursor.execute("UPDATE bot_intents SET keywords = %s WHERE id = %s", (final_json, category_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"❌ DB 更新錯誤: {e}")
+        return False
+    finally:
+        if 'conn' in locals(): conn.close()
+
+def insert_new_category(category, danger, response, action, keywords):
+    """ 插入全新的分類 """
+    try:
+        conn = mysql.connector.connect(
+            host=Config.DB_HOST, user=Config.DB_USER,
+            password=Config.DB_PASSWORD, database=Config.DB_NAME
+        )
+        cursor = conn.cursor()
+        
+        keywords_json = json.dumps(keywords, ensure_ascii=False)
+        
+        sql = """
+        INSERT INTO bot_intents (category, danger, response, action, keywords)
+        VALUES (%s, %s, %s, %s, %s)
+        """
+        cursor.execute(sql, (category, danger, response, action, keywords_json))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"❌ DB 新增錯誤: {e}")
+        return False
+    finally:
+        if 'conn' in locals(): conn.close()
