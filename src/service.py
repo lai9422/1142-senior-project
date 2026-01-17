@@ -52,27 +52,48 @@ def handle_message(event):
     # 3. 判斷意圖 (呼叫 intent_matcher 模組)
     matched_intent = find_best_match(seg_list, intents)
 
-    # 4. 決策與 AI 潤飾 (呼叫 ai_client 模組)
+    # 4. 決策與規則式修飾 (呼叫 ai_client 模組)
     final_response_text = ""
     action_code = "NONE"
 
     if matched_intent:
-        # 命中意圖 -> 請 AI 潤飾資料庫的回應
+        # 命中意圖
+        danger_level = matched_intent.get('danger', 0)
+        
+        # --- 修改這裡：提高修飾門檻 ---
+        # 原本 danger=0 是 Level 1，現在我們讓它至少是 Level 2 (前綴+內容)
+        # 這樣即使是一般對話，機器人也會加一句「我知道了...」之類的
+        
+        polish_level = 2  # 預設全部都用 Level 2 (中度修飾)
+        
+        if danger_level >= 4:
+            polish_level = 3  # 高危險 -> Level 3 (全套包覆)
+        
+        # 呼叫 ai_service
         final_response_text = ai_service.polish_response(
-            user_msg, matched_intent['response'], matched_intent['category']
+            user_text=user_msg, 
+            base_response=matched_intent['response'], 
+            category=matched_intent['category'],
+            level=polish_level 
         )
         action_code = matched_intent['action']
+        
     else:
-        # 未命中 -> 預設閒聊模式
+        # 未命中 -> 閒聊
         print("🤷‍♂️ 未命中，使用預設回應")
         default_text = "我不太確定你的意思，但我在這裡陪你。你可以多說一點嗎？"
-        final_response_text = ai_service.polish_response(user_msg, default_text, "閒聊")
+        final_response_text = ai_service.polish_response(
+            user_text=user_msg, 
+            base_response=default_text, 
+            category="閒聊", 
+            level=2 # 閒聊也用 Level 2
+        )
         action_code = "SHOW_MAIN_MENU"
 
     # 5. 發送回覆
     try:
         reply_obj = get_reply_object(final_response_text, action_code)
         line_bot_api.reply_message(event.reply_token, reply_obj)
-        print("✅ 訊息已發送")
+        print(f"✅ 訊息已發送 (Level used: {polish_level if matched_intent else 2})")
     except LineBotApiError as e:
         print(f"❌ Line API 錯誤: {e.status_code} {e.message}")

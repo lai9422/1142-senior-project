@@ -96,6 +96,25 @@ INSERT INTO bot_intents (category, keywords, danger, response, action) VALUES
     '嗨！我在這裡陪你，有什麼想說的嗎？', 
     'SHOW_MAIN_MENU'
 );
+
+
+
+CREATE TABLE IF NOT EXISTS response_modifiers (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '唯一編號',
+    category VARCHAR(50) NOT NULL COMMENT '對應 bot_intents 的分類，或 "default" (通用)',
+    mod_type VARCHAR(20) NOT NULL COMMENT '類型：prefix(前綴), suffix(後綴), particle(語氣詞)',
+    content TEXT NOT NULL COMMENT '修飾語內容',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '建立時間'
+);
+
+
+-- 插入一些預設範例資料
+INSERT INTO response_modifiers (category, mod_type, content) VALUES 
+('default', 'prefix', '我知道了，'),
+('default', 'suffix', '我們會在這裡陪你。'),
+('緊急求助', 'prefix', '請先深呼吸，我們很重視你的安全，'),
+('緊急求助', 'suffix', '請讓我們幫助你好嗎？'),
+('閒聊', 'particle', '～');
 ```
 
 # 資料庫更新

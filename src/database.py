@@ -117,3 +117,58 @@ def insert_new_category(category, danger, response, action, keywords):
         return False
     finally:
         if 'conn' in locals(): conn.close()
+
+
+# [src/database.py] 原有程式碼保持不變，請在最下方加入：
+
+def get_all_modifiers():
+    """ 取得所有修飾語 (供後台顯示用) """
+    try:
+        conn = mysql.connector.connect(
+            host=Config.DB_HOST, user=Config.DB_USER,
+            password=Config.DB_PASSWORD, database=Config.DB_NAME
+        )
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM response_modifiers ORDER BY category, mod_type")
+        rows = cursor.fetchall()
+        return rows
+    except Exception as e:
+        print(f"❌ 讀取修飾語失敗: {e}")
+        return []
+    finally:
+        if 'conn' in locals() and conn.is_connected(): conn.close()
+
+def add_modifier(category, mod_type, content):
+    """ 新增一條修飾語 """
+    try:
+        conn = mysql.connector.connect(
+            host=Config.DB_HOST, user=Config.DB_USER,
+            password=Config.DB_PASSWORD, database=Config.DB_NAME
+        )
+        cursor = conn.cursor()
+        sql = "INSERT INTO response_modifiers (category, mod_type, content) VALUES (%s, %s, %s)"
+        cursor.execute(sql, (category, mod_type, content))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"❌ 新增修飾語失敗: {e}")
+        return False
+    finally:
+        if 'conn' in locals() and conn.is_connected(): conn.close()
+
+def delete_modifier(mod_id):
+    """ 刪除一條修飾語 """
+    try:
+        conn = mysql.connector.connect(
+            host=Config.DB_HOST, user=Config.DB_USER,
+            password=Config.DB_PASSWORD, database=Config.DB_NAME
+        )
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM response_modifiers WHERE id = %s", (mod_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"❌ 刪除修飾語失敗: {e}")
+        return False
+    finally:
+        if 'conn' in locals() and conn.is_connected(): conn.close()

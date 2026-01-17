@@ -1,41 +1,57 @@
 from flask import Blueprint, render_template, request, redirect, url_for
-from src.database import get_intents, update_keywords_in_db, insert_new_category
+from src.database import (
+    get_intents, update_keywords_in_db, insert_new_category, 
+    get_all_modifiers, add_modifier, delete_modifier # <--- 記得引入這三個新函式
+)
 from src.text_processor import analyze_folder_words
 
-# 建立 Blueprint
 admin_blueprint = Blueprint('admin', __name__)
 
 @admin_blueprint.route('/admin', methods=['GET'])
 def admin_dashboard():
-    # 1. 取得目前所有分類 (供下拉選單用)
+    # 1. 取得意圖
     intents = get_intents()
-    
-    # 2. 分析文章詞頻
+    # 2. 分析文章
     top_words = analyze_folder_words(folder_path='./files', top_n=30)
+    # 3. (新) 取得修飾語
+    modifiers = get_all_modifiers()
     
-    return render_template('admin.html', intents=intents, top_words=top_words)
+    return render_template('admin.html', intents=intents, top_words=top_words, modifiers=modifiers)
 
 @admin_blueprint.route('/admin/submit', methods=['POST'])
 def admin_submit():
-    # 1. 取得使用者勾選的詞
+    # ... (保留原本的 keywords 處理邏輯，這裡省略不寫) ...
+    # 為了節省篇幅，請保留您原本的 admin_submit 程式碼
     selected_words = request.form.getlist('selected_words')
-    
-    if not selected_words:
-        return "❌ 未選擇任何詞彙 <a href='/admin'>返回</a>"
-
-    # 2. 判斷是「更新舊分類」還是「新分類」
-    mode = request.form.get('mode') # 'existing' or 'new'
+    mode = request.form.get('mode') 
     
     if mode == 'existing':
         cat_id = request.form.get('category_id')
-        update_keywords_in_db(cat_id, selected_words)
-        
+        if selected_words: update_keywords_in_db(cat_id, selected_words)
     elif mode == 'new':
         new_cat = request.form.get('new_category_name')
         danger = request.form.get('danger_level')
         response = request.form.get('response_text')
         action = request.form.get('action_code')
-        
-        insert_new_category(new_cat, int(danger), response, action, selected_words)
+        if new_cat: insert_new_category(new_cat, int(danger), response, action, selected_words)
 
-    return "✅ 更新成功！ <a href='/admin'>回到後台</a>"
+    return redirect(url_for('admin.admin_dashboard'))
+
+# ==========================
+# 新增：處理修飾語的路由
+# ==========================
+@admin_blueprint.route('/admin/modifier/add', methods=['POST'])
+def add_modifier_route():
+    category = request.form.get('category')
+    mod_type = request.form.get('mod_type')
+    content = request.form.get('content')
+    if category and mod_type and content:
+        add_modifier(category, mod_type, content)
+    return redirect(url_for('admin.admin_dashboard'))
+
+@admin_blueprint.route('/admin/modifier/delete', methods=['POST'])
+def delete_modifier_route():
+    mod_id = request.form.get('mod_id')
+    if mod_id:
+        delete_modifier(mod_id)
+    return redirect(url_for('admin.admin_dashboard'))
