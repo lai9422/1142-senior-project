@@ -60,7 +60,6 @@ def handle_message(event):
         # 命中意圖
         danger_level = matched_intent.get('danger', 0)
         
-        # --- 修改這裡：提高修飾門檻 ---
         # 原本 danger=0 是 Level 1，現在我們讓它至少是 Level 2 (前綴+內容)
         # 這樣即使是一般對話，機器人也會加一句「我知道了...」之類的
         

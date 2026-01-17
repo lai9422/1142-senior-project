@@ -1,7 +1,6 @@
 from flask import Blueprint, request, abort
 from linebot.exceptions import InvalidSignatureError
 from src.line_bot_api import handler
-# 必須導入 service，這樣 handler 的裝飾器才會生效
 import src.service 
 
 webhook_blueprint = Blueprint('webhook', __name__)

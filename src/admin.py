@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for
 from src.database import (
     get_intents, update_keywords_in_db, insert_new_category, 
-    get_all_modifiers, add_modifier, delete_modifier # <--- 記得引入這三個新函式
+    get_all_modifiers, add_modifier, delete_modifier 
 )
 from src.text_processor import analyze_folder_words
 
@@ -20,8 +20,6 @@ def admin_dashboard():
 
 @admin_blueprint.route('/admin/submit', methods=['POST'])
 def admin_submit():
-    # ... (保留原本的 keywords 處理邏輯，這裡省略不寫) ...
-    # 為了節省篇幅，請保留您原本的 admin_submit 程式碼
     selected_words = request.form.getlist('selected_words')
     mode = request.form.get('mode') 
     

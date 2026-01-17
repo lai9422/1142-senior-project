@@ -45,16 +45,8 @@ def get_intents():
                 "danger": 5,
                 "response": "1系統連線中，請先冷靜。我們很關心你，請撥打 113。",
                 "action": "SHOW_CRISIS_MENU"
-            },
-            {
-                "category": "打招呼 (備用)",
-                "keywords": ["嗨", "你好"],
-                "danger": 0,
-                "response": "嗨！系統維護中，但我還是在這裡。",
-                "action": "SHOW_MAIN_MENU"
             }
         ]
-# [src/database.py] 的最下方加入
 
 def update_keywords_in_db(category_id, new_keywords):
     """ 更新現有分類的關鍵字 (讀取舊的 -> 合併 -> 寫回) """
@@ -117,9 +109,6 @@ def insert_new_category(category, danger, response, action, keywords):
         return False
     finally:
         if 'conn' in locals(): conn.close()
-
-
-# [src/database.py] 原有程式碼保持不變，請在最下方加入：
 
 def get_all_modifiers():
     """ 取得所有修飾語 (供後台顯示用) """

@@ -1,6 +1,6 @@
 from flask import Flask
 from src.controller import webhook_blueprint
-from src.admin import admin_blueprint  # <--- 新增這行
+from src.admin import admin_blueprint  
 
 def create_app():
     app = Flask(__name__)
@@ -11,10 +11,10 @@ def create_app():
     return app
 
 def create_app():
-    app = Flask(__name__, template_folder='../templates') # <--- 告訴 Flask template 在上一層
+    app = Flask(__name__, template_folder='../templates') 
     
     # 註冊 Blueprints
     app.register_blueprint(webhook_blueprint)
-    app.register_blueprint(admin_blueprint) # <--- 新增這行
+    app.register_blueprint(admin_blueprint)
     
     return app
