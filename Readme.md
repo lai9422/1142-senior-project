@@ -56,13 +56,11 @@ ngrok http http://127.0.0.1:5001/
 密碼統一aeust
 
 ```
--- 1. 如果資料庫 'Aeust' 不存在，就建立它 (設定編碼為 utf8mb4 支援 Emoji)
 CREATE DATABASE IF NOT EXISTS Aeust CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- 2. 切換到剛剛建立的資料庫
 USE Aeust;
 
--- 3. 建立 'bot_intents' 資料表，用來存機器人的意圖與回覆
+-- 建立 'bot_intents' 資料表，用來存機器人的意圖與回覆
 CREATE TABLE IF NOT EXISTS bot_intents (
     id INT AUTO_INCREMENT PRIMARY KEY COMMENT '唯一編號 (自動遞增)',
     category VARCHAR(50) NOT NULL COMMENT '意圖分類 (例如：緊急求助)',
@@ -73,7 +71,16 @@ CREATE TABLE IF NOT EXISTS bot_intents (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '資料建立時間'
 );
 
--- 4. 插入範例資料 (keywords 必須是 JSON 格式的字串)
+CREATE TABLE IF NOT EXISTS response_modifiers (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '唯一編號',
+    category VARCHAR(50) NOT NULL COMMENT '對應 bot_intents 的分類，或 "default" (通用)',
+    mod_type VARCHAR(20) NOT NULL COMMENT '類型：prefix(前綴), suffix(後綴), particle(語氣詞)',
+    content TEXT NOT NULL COMMENT '修飾語內容',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '建立時間'
+);
+```
+# 示範資料
+```
 INSERT INTO bot_intents (category, keywords, danger, response, action) VALUES 
 (
     '緊急求助', 
@@ -97,18 +104,6 @@ INSERT INTO bot_intents (category, keywords, danger, response, action) VALUES
     'SHOW_MAIN_MENU'
 );
 
-
-
-CREATE TABLE IF NOT EXISTS response_modifiers (
-    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '唯一編號',
-    category VARCHAR(50) NOT NULL COMMENT '對應 bot_intents 的分類，或 "default" (通用)',
-    mod_type VARCHAR(20) NOT NULL COMMENT '類型：prefix(前綴), suffix(後綴), particle(語氣詞)',
-    content TEXT NOT NULL COMMENT '修飾語內容',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '建立時間'
-);
-
-
--- 插入一些預設範例資料
 INSERT INTO response_modifiers (category, mod_type, content) VALUES 
 # (分類, 類型, 內容)
             ('default', 'prefix', '嗯嗯，'),
