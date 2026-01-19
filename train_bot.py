@@ -181,3 +181,5 @@ if __name__ == "__main__":
             
     except ValueError:
         print("❌ 輸入格式錯誤，請輸入數字。")
+#ngrok config add-authtoken 38HkZGAIVLfaCKZZVIcJkem9nK9_3KeMcMJGCFbaUZQrC7fxN
+# ngrok http http://127.0.0.1:5001/
