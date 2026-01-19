@@ -45,7 +45,6 @@ https://drive.google.com/file/d/1Wi1gUjaOv2A06M0gK8xqLiAIjOv1lbpD/view?usp=shari
 
 `pip install flask line-bot-sdk python-dotenv jieba mysql-connector-python requests`
 
-
 # 伺服器啟動
 ngrok下載 https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip
 
