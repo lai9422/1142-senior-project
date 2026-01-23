@@ -79,6 +79,24 @@ CREATE TABLE IF NOT EXISTS response_modifiers (
     content TEXT NOT NULL COMMENT '修飾語內容',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '建立時間'
 );
+
+
+CREATE TABLE IF NOT EXISTS pending_messages (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL,
+    user_message TEXT NOT NULL,
+    status VARCHAR(20) DEFAULT 'pending', -- 狀態: pending (待審), replied (已回)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+CREATE TABLE IF NOT EXISTS chat_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL,
+    role VARCHAR(20) NOT NULL,  -- 記錄是誰說的：'user' (使用者) 或 'bot' (機器人/管理員)
+    message TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 ```
 # 示範資料
 ```
