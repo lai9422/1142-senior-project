@@ -161,3 +161,97 @@ def delete_modifier(mod_id):
         return False
     finally:
         if 'conn' in locals() and conn.is_connected(): conn.close()
+
+
+
+# [請將這段程式碼加到 src/database.py 的最下方]
+
+def save_pending_message(user_id, user_message):
+    """ 儲存使用者的訊息到待審核區 """
+    try:
+        conn = mysql.connector.connect(
+            host=Config.DB_HOST, user=Config.DB_USER,
+            password=Config.DB_PASSWORD, database=Config.DB_NAME
+        )
+        cursor = conn.cursor()
+        sql = "INSERT INTO pending_messages (user_id, user_message) VALUES (%s, %s)"
+        cursor.execute(sql, (user_id, user_message))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"❌ 儲存待審訊息失敗: {e}")
+        return False
+    finally:
+        if 'conn' in locals() and conn.is_connected(): conn.close()
+
+def get_pending_messages():
+    """ 取得所有狀態為 'pending' 的訊息 """
+    try:
+        conn = mysql.connector.connect(
+            host=Config.DB_HOST, user=Config.DB_USER,
+            password=Config.DB_PASSWORD, database=Config.DB_NAME
+        )
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM pending_messages WHERE status = 'pending' ORDER BY created_at DESC")
+        rows = cursor.fetchall()
+        return rows
+    except Exception as e:
+        print(f"❌ 讀取待審訊息失敗: {e}")
+        return []
+    finally:
+        if 'conn' in locals() and conn.is_connected(): conn.close()
+
+def update_message_status(msg_id, status):
+    """ 更新訊息狀態 (例如改為 'replied') """
+    try:
+        conn = mysql.connector.connect(
+            host=Config.DB_HOST, user=Config.DB_USER,
+            password=Config.DB_PASSWORD, database=Config.DB_NAME
+        )
+        cursor = conn.cursor()
+        cursor.execute("UPDATE pending_messages SET status = %s WHERE id = %s", (status, msg_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"❌ 更新狀態失敗: {e}")
+        return False
+    finally:
+        if 'conn' in locals() and conn.is_connected(): conn.close()
+
+
+# [請加到 src/database.py 最下方]
+
+def log_chat(user_id, role, message):
+    """ 記錄一筆對話 (User 或 Bot) """
+    try:
+        conn = mysql.connector.connect(
+            host=Config.DB_HOST, user=Config.DB_USER,
+            password=Config.DB_PASSWORD, database=Config.DB_NAME
+        )
+        cursor = conn.cursor()
+        sql = "INSERT INTO chat_logs (user_id, role, message) VALUES (%s, %s, %s)"
+        cursor.execute(sql, (user_id, role, message))
+        conn.commit()
+    except Exception as e:
+        print(f"❌ 記錄對話失敗: {e}")
+    finally:
+        if 'conn' in locals() and conn.is_connected(): conn.close()
+
+def get_chat_history_by_user(user_id):
+    """ 取得指定 User 的完整對話紀錄 (依時間排序) """
+    try:
+        conn = mysql.connector.connect(
+            host=Config.DB_HOST, user=Config.DB_USER,
+            password=Config.DB_PASSWORD, database=Config.DB_NAME
+        )
+        cursor = conn.cursor(dictionary=True)
+        # 依時間先後排序，這樣才能還原前後文
+        sql = "SELECT * FROM chat_logs WHERE user_id = %s ORDER BY created_at ASC"
+        cursor.execute(sql, (user_id,))
+        rows = cursor.fetchall()
+        return rows
+    except Exception as e:
+        print(f"❌ 查詢對話失敗: {e}")
+        return []
+    finally:
+        if 'conn' in locals() and conn.is_connected(): conn.close()
