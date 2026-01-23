@@ -39,25 +39,21 @@
 </div>
 
 <script>
-    // 取得目前正在監控的 User ID
     const currentUserId = "{{ user_id }}";
     
     function autoRefreshHistory() {
-        // 如果沒有指定 User ID，就不需要更新
         if (!currentUserId) return;
 
-        fetch(`/admin/api/history_content?user_id=${currentUserId}`)
+        // 🔥 關鍵修正：加上 new Date().getTime() 防止快取
+        fetch(`/admin/api/history_content?user_id=${currentUserId}&t=` + new Date().getTime())
             .then(r => r.text())
             .then(html => {
                 const container = document.getElementById('live-history-content');
-                // 檢查是否在底部 (為了決定更新後要不要自動捲動)
-                // 這裡簡化：如果有更新就替換
-                container.innerHTML = html;
+                if (container) container.innerHTML = html;
             })
             .catch(e => console.error(e));
     }
 
-    // 每 3 秒更新一次
     setInterval(autoRefreshHistory, 3000);
 </script>
 
